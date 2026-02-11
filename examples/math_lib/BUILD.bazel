@@ -1,0 +1,6 @@
+load("//zig:defs.bzl", "zig_library")
+
+zig_library(
+    name = "math",
+    srcs = ["math.zig"],
+)

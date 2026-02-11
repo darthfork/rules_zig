@@ -1,0 +1,12 @@
+module(
+    name = "rules_zig",
+    version = "0.1.0",
+)
+
+bazel_dep(name = "platforms", version = "1.0.0")
+
+zig = use_extension("//zig:extensions.bzl", "zig")
+zig.toolchain(zig_version = "0.13.0")
+use_repo(zig, "zig_toolchains")
+
+register_toolchains("@zig_toolchains//:all")

@@ -1,0 +1,6 @@
+load("//zig:defs.bzl", "zig_binary")
+
+zig_binary(
+    name = "hello_world",
+    srcs = ["main.zig"],
+)
