@@ -7,30 +7,22 @@ _ZIG_PLATFORMS = {
     "macos-aarch64": struct(
         os_constraint = "@platforms//os:macos",
         cpu_constraint = "@platforms//cpu:aarch64",
-        url = "https://ziglang.org/download/{version}/zig-macos-aarch64-{version}.tar.xz",
-        sha256 = "46fae219656545dfaf4dce12fb4e8685cec5b51d721beee9389ab4194d43394c",
-        strip_prefix = "zig-macos-aarch64-{version}",
+        index_key = "aarch64-macos",
     ),
     "macos-x86_64": struct(
         os_constraint = "@platforms//os:macos",
         cpu_constraint = "@platforms//cpu:x86_64",
-        url = "https://ziglang.org/download/{version}/zig-macos-x86_64-{version}.tar.xz",
-        sha256 = "8b06ed1091b2269b700b3b07f8e3be3b833000841bae5aa6a09b1a8b4773effd",
-        strip_prefix = "zig-macos-x86_64-{version}",
+        index_key = "x86_64-macos",
     ),
     "linux-x86_64": struct(
         os_constraint = "@platforms//os:linux",
         cpu_constraint = "@platforms//cpu:x86_64",
-        url = "https://ziglang.org/download/{version}/zig-linux-x86_64-{version}.tar.xz",
-        sha256 = "d45312e61ebcc48032b77bc4cf7fd6915c11fa16e4aad116b66c9468211230ea",
-        strip_prefix = "zig-linux-x86_64-{version}",
+        index_key = "x86_64-linux",
     ),
     "linux-aarch64": struct(
         os_constraint = "@platforms//os:linux",
         cpu_constraint = "@platforms//cpu:aarch64",
-        url = "https://ziglang.org/download/{version}/zig-linux-aarch64-{version}.tar.xz",
-        sha256 = "041ac42323837eb5624068acd8b00cd5777dac4cf91179e8dad7a7e90dd0c556",
-        strip_prefix = "zig-linux-aarch64-{version}",
+        index_key = "aarch64-linux",
     ),
 }
 
@@ -45,9 +37,6 @@ def _zig_impl(ctx):
         fail("No zig.toolchain() tag was specified. " +
              "Add zig.toolchain(zig_version = \"0.13.0\") to your MODULE.bazel.")
 
-    if zig_version != "0.13.0":
-        fail("rules_zig MVP only supports Zig 0.13.0, got: " + zig_version)
-
     toolchain_names = []
     toolchain_repo_names = []
     os_constraints = []
@@ -58,11 +47,9 @@ def _zig_impl(ctx):
 
         zig_repository(
             name = repo_name,
-            urls = [platform_info.url.format(version = zig_version)],
-            sha256 = platform_info.sha256,
-            strip_prefix = platform_info.strip_prefix.format(version = zig_version),
             zig_version = zig_version,
             platform = platform_key,
+            index_key = platform_info.index_key,
         )
 
         toolchain_names.append("zig_toolchain_" + platform_key.replace("-", "_"))

@@ -10,16 +10,24 @@ Bazel rules for building [Zig](https://ziglang.org/) projects.
 
 ## Requirements
 
-- Bazel 9.0+
+- Zig: 0.13.0
+- Bazel: 9.0+
 
 ## Setup
 
 ### Bzlmod (MODULE.bazel)
 
+Since `rules_zig` is not yet published to the [Bazel Central Registry](https://registry.bazel.build/), use `git_override` to depend on it directly from GitHub.
+
 Add the following to your `MODULE.bazel`:
 
 ```starlark
 bazel_dep(name = "rules_zig", version = "0.1.0")
+git_override(
+    module_name = "rules_zig",
+    remote = "https://github.com/darthfork/rules_zig.git",
+    commit = "<commit_sha>",  # pin to a specific commit
+)
 
 zig = use_extension("@rules_zig//zig:extensions.bzl", "zig")
 zig.toolchain(zig_version = "0.13.0")
@@ -28,13 +36,15 @@ use_repo(zig, "zig_toolchains")
 register_toolchains("@zig_toolchains//:all")
 ```
 
+Replace `<commit_sha>` with the commit you want to pin to.
+
 ### WORKSPACE
 
 WORKSPACE is not supported. Bazel 9+ requires Bzlmod.
 
 ## Rules
 
-### `zig_binary`
+### `zig_binary` example
 
 Compiles Zig source files into an executable.
 
@@ -52,7 +62,7 @@ zig_binary(
 | `srcs` | List of `.zig` source files | Yes |
 | `main` | Root source file to compile. Defaults to the first file in `srcs`. | No |
 
-### `zig_library`
+### `zig_library` example
 
 Compiles Zig source files into a static library.
 
@@ -69,8 +79,3 @@ zig_library(
 |-----------|-------------|----------|
 | `srcs` | List of `.zig` source files | Yes |
 | `main` | Root source file for the library. Defaults to the first file in `srcs`. | No |
-
-
-## Supported Zig Versions
-
-- 0.13.0
