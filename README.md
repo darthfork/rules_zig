@@ -6,6 +6,7 @@ Bazel rules for building [Zig](https://ziglang.org/) projects.
 
 - `zig_binary` — compile Zig source files into an executable
 - `zig_library` — compile Zig source files into a static library (`.a`)
+- `zig_test` — compile and run Zig tests with `bazel test`
 - Bazel toolchain integration with platform-aware compiler resolution
 
 ## Requirements
@@ -95,3 +96,24 @@ zig_library(
 |-----------|-------------|----------|
 | `srcs` | List of `.zig` source files | Yes |
 | `main` | Root source file for the library. Defaults to the first file in `srcs`. | No |
+
+### `zig_test` example
+
+Compiles and runs Zig tests through `bazel test`.
+
+```starlark
+load("@rules_zig//zig:defs.bzl", "zig_test")
+
+zig_test(
+    name = "math_test",
+    srcs = [
+        "math_test.zig",
+        "math.zig",
+    ],
+)
+```
+
+| Attribute | Description | Required |
+|-----------|-------------|----------|
+| `srcs` | List of `.zig` source files needed by the test, including imported sibling files | Yes |
+| `main` | Root test source file. Defaults to the first file in `srcs`. | No |
