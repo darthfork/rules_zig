@@ -1,5 +1,6 @@
 """Module extension for setting up the Zig toolchain."""
 
+load("//zig/private:versions.bzl", "pinned_zig_versions")
 load("//zig/private:zig_repository.bzl", "zig_repository")
 load("//zig/private:zig_toolchains_repo.bzl", "zig_toolchains_repo")
 
@@ -36,6 +37,12 @@ def _zig_impl(ctx):
     if not zig_version:
         fail("No zig.toolchain() tag was specified. " +
              "Add zig.toolchain(zig_version = \"0.13.0\") to your MODULE.bazel.")
+
+    if zig_version not in pinned_zig_versions():
+        fail("Unsupported zig_version '{}'. Pinned versions: {}.".format(
+            zig_version,
+            ", ".join(pinned_zig_versions()),
+        ))
 
     toolchain_names = []
     toolchain_repo_names = []

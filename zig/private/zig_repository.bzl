@@ -1,36 +1,21 @@
-"""Repository rule for downloading a Zig SDK."""
+"""Repository rule for downloading a pinned Zig SDK."""
 
-_ZIG_INDEX_URL = "https://ziglang.org/download/index.json"
+load("//zig/private:versions.bzl", "get_zig_sdk", "pinned_zig_versions")
 
 def _zig_repository_impl(ctx):
-    ctx.report_progress("Fetching Zig download index")
-    index_path = ctx.path("index.json")
-    ctx.download(
-        url = [_ZIG_INDEX_URL],
-        output = index_path,
-    )
-    index = json.decode(ctx.read(index_path))
-    ctx.delete(index_path)
-
-    version_entry = index.get(ctx.attr.zig_version)
-    if not version_entry:
-        fail("Zig version '{}' not found in the download index.".format(ctx.attr.zig_version))
-
-    platform_entry = version_entry.get(ctx.attr.index_key)
-    if not platform_entry:
-        fail("Platform '{}' not found for Zig version '{}'.".format(
-            ctx.attr.index_key,
+    sdk = get_zig_sdk(ctx.attr.zig_version, ctx.attr.index_key)
+    if not sdk:
+        fail("Unsupported Zig SDK '{} / {}'. Pinned versions: {}.".format(
             ctx.attr.zig_version,
+            ctx.attr.index_key,
+            ", ".join(pinned_zig_versions()),
         ))
-
-    tarball_url = platform_entry["tarball"]
-    shasum = platform_entry["shasum"]
 
     ctx.report_progress("Downloading Zig SDK")
     ctx.download_and_extract(
-        url = [tarball_url],
-        sha256 = shasum,
-        stripPrefix = tarball_url.split("/")[-1].removesuffix(".tar.xz").removesuffix(".zip"),
+        url = [sdk.tarball],
+        sha256 = sdk.sha256,
+        stripPrefix = sdk.strip_prefix,
     )
 
     zig_exe = "zig.exe" if "windows" in ctx.attr.platform else "zig"
@@ -67,9 +52,9 @@ zig_repository = repository_rule(
             mandatory = True,
         ),
         "index_key": attr.string(
-            doc = "The arch-os key used in the Zig download index (e.g., 'aarch64-macos').",
+            doc = "The arch-os key used in pinned Zig SDK metadata (e.g., 'aarch64-macos').",
             mandatory = True,
         ),
     },
-    doc = "Downloads a Zig SDK for a specific platform.",
+    doc = "Downloads a pinned Zig SDK for a specific platform.",
 )

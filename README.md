@@ -4,10 +4,12 @@ Bazel rules for building [Zig](https://ziglang.org/) projects.
 
 ## Features
 
-- `zig_binary` — compile Zig source files into an executable
-- `zig_library` — compile Zig source files into a static library (`.a`)
-- `zig_test` — compile and run Zig tests with `bazel test`
+- `zig_binary` compiles Zig source files into an executable
+- `zig_library` compiles Zig source files into a static library (`.a`)
+- `zig_test` compiles and runs Zig tests with `bazel test`
 - Bazel toolchain integration with platform-aware compiler resolution
+- Hermetic Zig action caches that live under Bazel action outputs, not shared `/tmp` state
+- Pinned Zig SDK metadata checked into this repository for reproducible toolchain resolution
 
 ## Requirements
 
@@ -21,12 +23,11 @@ The repository currently runs CI on:
 - Bazel 9.0.1 on Linux and macOS
 - Bazel 9.0.2 on Linux and macOS
 
-This gives us coverage for the minimum supported Bazel 9 line and a newer Bazel 9 patch release that is currently available on GitHub-hosted runners.
+This gives coverage for the minimum supported Bazel 9 line and a newer Bazel 9 patch release that is currently available on GitHub-hosted runners.
 
 CI currently runs:
 
-- `bazel build //...`
-- `bazel test ...` when Bazel test targets are present
+- `bazel test //...`
 
 As the ruleset grows, this matrix can expand to include more Bazel versions, additional examples, and stricter validation.
 
@@ -55,9 +56,34 @@ register_toolchains("@zig_toolchains//:all")
 
 Replace `<commit_sha>` with the commit you want to pin to.
 
+### Supported Zig SDK versions
+
+Zig SDK download metadata is pinned in `zig/private/versions.bzl`.
+
+Today that means:
+
+- `zig.toolchain(zig_version = "0.13.0")` works
+- unpinned versions fail during module resolution with a clear error
+
+That keeps toolchain URLs stable and reviewable in-repo instead of depending on whatever `https://ziglang.org/download/index.json` returns later.
+
 ### WORKSPACE
 
 WORKSPACE is not supported. Bazel 9+ requires Bzlmod.
+
+## Exec platform vs target platform
+
+These rules currently resolve the Zig SDK as a normal Bazel toolchain, so the SDK is selected for the action's exec platform.
+
+In practice:
+
+- local macOS builds use a macOS Zig SDK
+- local Linux builds use a Linux Zig SDK
+- remote execution would pick the Zig SDK that matches the remote exec platform
+
+`zig_binary`, `zig_library`, and `zig_test` do not yet model Bazel target-platform driven cross-compilation. They invoke Zig without a `-target` flag, so outputs are currently host-native for the chosen exec-platform SDK.
+
+So for now, treat these rules as host-native builds with exec-platform-aware toolchain selection, not full Bazel cross-compilation rules yet.
 
 ## Rules
 
