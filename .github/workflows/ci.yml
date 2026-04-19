@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: bazel ${{ matrix.bazel }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        bazel:
+          - 9.0.1
+          - 9.0.2
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Select Bazel version
+        run: echo "USE_BAZEL_VERSION=${{ matrix.bazel }}" >> "$GITHUB_ENV"
+
+      - name: Show Bazel version
+        run: bazel version
+
+      - name: Run test suite
+        run: bazel test //...

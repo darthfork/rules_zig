@@ -1,6 +1,14 @@
-load("//zig:defs.bzl", "zig_library")
+load("//zig:defs.bzl", "zig_library", "zig_test")
 
 zig_library(
     name = "math",
     srcs = ["math.zig"],
+)
+
+zig_test(
+    name = "math_test",
+    srcs = [
+        "math_test.zig",
+        "math.zig",
+    ],
 )
