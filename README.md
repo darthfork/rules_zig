@@ -13,6 +13,22 @@ Bazel rules for building [Zig](https://ziglang.org/) projects.
 - Zig: 0.13.0
 - Bazel: 9.0+
 
+## CI and support matrix
+
+The repository currently runs CI on:
+
+- Bazel 9.0.1 on Linux and macOS
+- Bazel 9.1.0 on Linux and macOS
+
+This gives us coverage for the current minimum supported Bazel 9 release line and the latest Bazel 9 minor release.
+
+CI currently runs:
+
+- `bazel build //...`
+- `bazel test ...` when Bazel test targets are present
+
+As the ruleset grows, this matrix can expand to include more Bazel versions, additional examples, and stricter validation.
+
 ## Setup
 
 ### Bzlmod (MODULE.bazel)

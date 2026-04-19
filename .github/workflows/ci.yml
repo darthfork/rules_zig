@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: bazel ${{ matrix.bazel }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        bazel:
+          - 9.0.1
+          - 9.1.0
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bazelisk
+        uses: bazelbuild/setup-bazelisk@v3
+
+      - name: Select Bazel version
+        run: echo "USE_BAZEL_VERSION=${{ matrix.bazel }}" >> "$GITHUB_ENV"
+
+      - name: Show Bazel version
+        run: bazel version
+
+      - name: Build all targets
+        run: bazel build //...
+
+      - name: Run test targets if present
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_TARGETS="$(bazel query 'kind(".*_test rule", //...)' || true)"
+          if [[ -z "${TEST_TARGETS}" ]]; then
+            echo "No Bazel test targets found yet; skipping bazel test."
+            exit 0
+          fi
+
+          bazel test ${TEST_TARGETS}
