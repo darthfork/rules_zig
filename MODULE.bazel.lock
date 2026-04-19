@@ -189,14 +189,14 @@
   "moduleExtensions": {
     "//zig:extensions.bzl%zig": {
       "general": {
-        "bzlTransitiveDigest": "VC7m0+AazLUhKgJl0i71MBRzAsgfidDInr5S8NPJMOg=",
-        "usagesDigest": "iEp0QLPEFK94gZxh67yAIWjjvAnxBEn2cCMoE+RRHY0=",
+        "bzlTransitiveDigest": "FUodQNJVgCSqxwkc4v/mbiiCeZFZOAk1f3buP+yS+tE=",
+        "usagesDigest": "1zsLy7Z6DquC93RpnXpFVDS+CNStZmTrLh3/REgEtcQ=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "zig_macos_aarch64": {
             "repoRuleId": "@@//zig/private:zig_repository.bzl%zig_repository",
             "attributes": {
-              "zig_version": "0.15.2",
+              "zig_version": "0.13.0",
               "platform": "macos-aarch64",
               "index_key": "aarch64-macos"
             }
@@ -204,7 +204,7 @@
           "zig_macos_x86_64": {
             "repoRuleId": "@@//zig/private:zig_repository.bzl%zig_repository",
             "attributes": {
-              "zig_version": "0.15.2",
+              "zig_version": "0.13.0",
               "platform": "macos-x86_64",
               "index_key": "x86_64-macos"
             }
@@ -212,7 +212,7 @@
           "zig_linux_x86_64": {
             "repoRuleId": "@@//zig/private:zig_repository.bzl%zig_repository",
             "attributes": {
-              "zig_version": "0.15.2",
+              "zig_version": "0.13.0",
               "platform": "linux-x86_64",
               "index_key": "x86_64-linux"
             }
@@ -220,7 +220,7 @@
           "zig_linux_aarch64": {
             "repoRuleId": "@@//zig/private:zig_repository.bzl%zig_repository",
             "attributes": {
-              "zig_version": "0.15.2",
+              "zig_version": "0.13.0",
               "platform": "linux-aarch64",
               "index_key": "aarch64-linux"
             }

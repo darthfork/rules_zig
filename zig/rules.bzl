@@ -8,40 +8,49 @@ ZigLibraryInfo = provider(
     },
 )
 
+def _select_main_src(srcs, main, rule_name):
+    if len(srcs) == 0:
+        fail("{} requires at least one source file in srcs.".format(rule_name))
+
+    if main:
+        for src in srcs:
+            if src.basename == main or src.short_path.endswith(main):
+                return src
+        fail("main file '{}' not found in srcs.".format(main))
+
+    return srcs[0]
+
+def _declare_cache_dirs(ctx):
+    return (
+        ctx.actions.declare_directory(ctx.label.name + "_cache"),
+        ctx.actions.declare_directory(ctx.label.name + "_global_cache"),
+    )
+
+def _add_common_args(args, main_src, out, cache_dir, global_cache_dir):
+    args.add(main_src)
+    args.add("-femit-bin=" + out.path)
+    args.add("--cache-dir")
+    args.add(cache_dir.path)
+    args.add("--global-cache-dir")
+    args.add(global_cache_dir.path)
+
 def _zig_binary_impl(ctx):
     zig_toolchain = ctx.toolchains["//zig:toolchain_type"]
     zig_info = zig_toolchain.zig_info
     zig_exe = zig_info.zig_exe
 
     out = ctx.actions.declare_file(ctx.label.name)
+    cache_dir, global_cache_dir = _declare_cache_dirs(ctx)
 
     srcs = ctx.files.srcs
-    if len(srcs) == 0:
-        fail("zig_binary requires at least one source file in srcs.")
-
-    # Determine the main source file.
-    main_src = None
-    if ctx.attr.main:
-        for src in srcs:
-            if src.short_path.endswith(ctx.attr.main):
-                main_src = src
-                break
-        if not main_src:
-            fail("main file '{}' not found in srcs.".format(ctx.attr.main))
-    else:
-        main_src = srcs[0]
+    main_src = _select_main_src(srcs, ctx.attr.main, "zig_binary")
 
     args = ctx.actions.args()
     args.add("build-exe")
-    args.add(main_src)
-    args.add("-femit-bin=" + out.path)
-    args.add("--cache-dir")
-    args.add("/tmp/zig-cache")
-    args.add("--global-cache-dir")
-    args.add("/tmp/zig-global-cache")
+    _add_common_args(args, main_src, out, cache_dir, global_cache_dir)
 
     ctx.actions.run(
-        outputs = [out],
+        outputs = [out, cache_dir, global_cache_dir],
         inputs = srcs,
         executable = zig_exe,
         arguments = [args],
@@ -78,33 +87,17 @@ def _zig_library_impl(ctx):
     zig_exe = zig_info.zig_exe
 
     out = ctx.actions.declare_file("lib" + ctx.label.name + ".a")
+    cache_dir, global_cache_dir = _declare_cache_dirs(ctx)
 
     srcs = ctx.files.srcs
-    if len(srcs) == 0:
-        fail("zig_library requires at least one source file in srcs.")
-
-    main_src = None
-    if ctx.attr.main:
-        for src in srcs:
-            if src.short_path.endswith(ctx.attr.main):
-                main_src = src
-                break
-        if not main_src:
-            fail("main file '{}' not found in srcs.".format(ctx.attr.main))
-    else:
-        main_src = srcs[0]
+    main_src = _select_main_src(srcs, ctx.attr.main, "zig_library")
 
     args = ctx.actions.args()
     args.add("build-lib")
-    args.add(main_src)
-    args.add("-femit-bin=" + out.path)
-    args.add("--cache-dir")
-    args.add("/tmp/zig-cache")
-    args.add("--global-cache-dir")
-    args.add("/tmp/zig-global-cache")
+    _add_common_args(args, main_src, out, cache_dir, global_cache_dir)
 
     ctx.actions.run(
-        outputs = [out],
+        outputs = [out, cache_dir, global_cache_dir],
         inputs = srcs,
         executable = zig_exe,
         arguments = [args],
@@ -141,21 +134,12 @@ def _zig_test_impl(ctx):
     zig_exe = zig_info.zig_exe
 
     srcs = ctx.files.srcs
-    if len(srcs) == 0:
-        fail("zig_test requires at least one source file in srcs.")
-
-    main_filename = ctx.attr.main if ctx.attr.main else srcs[0].basename
-    main_src = None
-    for src in srcs:
-        if src.basename == main_filename or src.short_path.endswith(main_filename):
-            main_src = src
-            break
-    if not main_src:
-        fail("main file '{}' not found in srcs.".format(main_filename))
+    main_src = _select_main_src(srcs, ctx.attr.main, "zig_test")
 
     out = ctx.actions.declare_file(ctx.label.name)
     src_tree = ctx.actions.declare_directory(ctx.label.name + "_srcs")
     zig_link = ctx.actions.declare_file(ctx.label.name + "_zig")
+    cache_dir, global_cache_dir = _declare_cache_dirs(ctx)
 
     ctx.actions.symlink(
         output = zig_link,
@@ -167,8 +151,10 @@ def _zig_test_impl(ctx):
     for src in srcs:
         copy_commands.append("cp '{}' '{}/{}'".format(src.path, src_tree.path, src.basename))
 
-    command = "set -euo pipefail\nROOT=\"$PWD\"\nmkdir -p '{src_tree}'\n{copies}\ncd '{src_tree}'\n\"$ROOT/{zig}\" test '{main}' -femit-bin=\"$ROOT/{out}\" --cache-dir /tmp/zig-cache --global-cache-dir /tmp/zig-global-cache".format(
+    command = "set -euo pipefail\nROOT=\"$PWD\"\nmkdir -p '{src_tree}' '{cache_dir}' '{global_cache_dir}'\n{copies}\ncd '{src_tree}'\n\"$ROOT/{zig}\" test '{main}' -femit-bin=\"$ROOT/{out}\" --cache-dir \"$ROOT/{cache_dir}\" --global-cache-dir \"$ROOT/{global_cache_dir}\"".format(
         src_tree = src_tree.path,
+        cache_dir = cache_dir.path,
+        global_cache_dir = global_cache_dir.path,
         copies = "\n".join(copy_commands),
         zig = zig_link.path,
         main = main_src.basename,
@@ -176,7 +162,7 @@ def _zig_test_impl(ctx):
     )
 
     ctx.actions.run_shell(
-        outputs = [out, src_tree],
+        outputs = [out, src_tree, cache_dir, global_cache_dir],
         inputs = srcs + [zig_link],
         command = command,
         mnemonic = "ZigCompileTest",
