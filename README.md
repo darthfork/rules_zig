@@ -18,9 +18,9 @@ Bazel rules for building [Zig](https://ziglang.org/) projects.
 The repository currently runs CI on:
 
 - Bazel 9.0.1 on Linux and macOS
-- Bazel 9.1.0 on Linux and macOS
+- Bazel 9.0.2 on Linux and macOS
 
-This gives us coverage for the current minimum supported Bazel 9 release line and the latest Bazel 9 minor release.
+This gives us coverage for the minimum supported Bazel 9 line and a newer Bazel 9 patch release that is currently available on GitHub-hosted runners.
 
 CI currently runs:
 

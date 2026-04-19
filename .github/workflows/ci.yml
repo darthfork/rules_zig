@@ -23,7 +23,7 @@ jobs:
           - macos-latest
         bazel:
           - 9.0.1
-          - 9.1.0
+          - 9.0.2
 
     steps:
       - name: Check out repository
