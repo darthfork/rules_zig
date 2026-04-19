@@ -38,17 +38,5 @@ jobs:
       - name: Show Bazel version
         run: bazel version
 
-      - name: Build all targets
-        run: bazel build //...
-
-      - name: Run test targets if present
-        shell: bash
-        run: |
-          set -euo pipefail
-          TEST_TARGETS="$(bazel query 'kind(".*_test rule", //...)' || true)"
-          if [[ -z "${TEST_TARGETS}" ]]; then
-            echo "No Bazel test targets found yet; skipping bazel test."
-            exit 0
-          fi
-
-          bazel test ${TEST_TARGETS}
+      - name: Run test suite
+        run: bazel test //...
