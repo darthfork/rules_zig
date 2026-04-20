@@ -104,6 +104,7 @@ zig_binary(
 |-----------|-------------|----------|
 | `srcs` | List of `.zig` source files | Yes |
 | `main` | Root source file to compile. Defaults to the first file in `srcs`. | No |
+| `deps` | `zig_library` dependencies exposed as Zig imports and link inputs | No |
 
 ### `zig_library` example
 
@@ -118,10 +119,39 @@ zig_library(
 )
 ```
 
+`zig_library` dependencies are imported by module name. By default that is the target name, and you can override it with `module_name`.
+
 | Attribute | Description | Required |
 |-----------|-------------|----------|
 | `srcs` | List of `.zig` source files | Yes |
 | `main` | Root source file for the library. Defaults to the first file in `srcs`. | No |
+| `module_name` | Import name exposed to dependents. Defaults to the target name. | No |
+| `deps` | Other `zig_library` targets this library imports or links | No |
+
+### Dependency composition example
+
+```starlark
+load("@rules_zig//zig:defs.bzl", "zig_binary", "zig_library")
+
+zig_library(
+    name = "greeter",
+    srcs = ["greeter.zig"],
+)
+
+zig_library(
+    name = "message",
+    srcs = ["message.zig"],
+    deps = [":greeter"],
+)
+
+zig_binary(
+    name = "hello_deps",
+    srcs = ["main.zig"],
+    deps = [":message"],
+)
+```
+
+`message.zig` can then use `const greeter = @import("greeter");`, and `main.zig` can use `const message = @import("message");`.
 
 ### `zig_test` example
 

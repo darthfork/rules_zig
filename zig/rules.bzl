@@ -4,7 +4,12 @@ ZigLibraryInfo = provider(
     doc = "Information about a compiled Zig library.",
     fields = {
         "archive": "File: The compiled static library archive (.a).",
-        "srcs": "depset of File: The original Zig source files.",
+        "archives": "depset of File: This library archive plus transitive dependency archives.",
+        "main_src": "File: The root Zig source file for this module.",
+        "module_dep_graph": "dict(string, list[string]): Transitive module to direct-import dependencies.",
+        "module_name": "string: Import name exposed for this library.",
+        "modules": "dict(string, File): Transitive import-name to root-source mapping.",
+        "srcs": "depset of File: The original Zig source files, including transitive dependency sources.",
     },
 )
 
@@ -26,8 +31,65 @@ def _declare_cache_dirs(ctx):
         ctx.actions.declare_directory(ctx.label.name + "_global_cache"),
     )
 
-def _add_common_args(args, main_src, out, cache_dir, global_cache_dir):
-    args.add(main_src)
+def _collect_dep_info(deps):
+    modules = {}
+    module_dep_graph = {}
+    transitive_srcs = []
+    transitive_archives = []
+
+    for dep in deps:
+        dep_info = dep[ZigLibraryInfo]
+        transitive_srcs.append(dep_info.srcs)
+        transitive_archives.append(dep_info.archives)
+        for module_name, module_src in dep_info.modules.items():
+            existing = modules.get(module_name)
+            if existing and existing.path != module_src.path:
+                fail("duplicate Zig module name '{}' provided by dependencies".format(module_name))
+            modules[module_name] = module_src
+        for module_name, module_deps in dep_info.module_dep_graph.items():
+            existing = module_dep_graph.get(module_name)
+            if existing and existing != module_deps:
+                fail("conflicting dependency graph for Zig module '{}'".format(module_name))
+            module_dep_graph[module_name] = module_deps
+
+    return modules, module_dep_graph, transitive_srcs, transitive_archives
+
+def _add_module_args(args, dep_modules, module_dep_graph):
+    emitted = {}
+
+    for _ in dep_modules.keys():
+        progressed = False
+        for module_name in sorted(dep_modules.keys()):
+            if module_name in emitted:
+                continue
+
+            ready = True
+            for dep in module_dep_graph.get(module_name, []):
+                if dep not in emitted:
+                    ready = False
+                    break
+
+            if ready:
+                for dep in module_dep_graph.get(module_name, []):
+                    args.add("--dep")
+                    args.add(dep)
+                args.add("-M{}={}".format(module_name, dep_modules[module_name].path))
+                emitted[module_name] = True
+                progressed = True
+
+        if len(emitted) == len(dep_modules):
+            return
+        if not progressed:
+            fail("cyclic Zig module dependencies detected in deps")
+
+def _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives):
+    for module_name in root_deps:
+        args.add("--dep")
+        args.add(module_name)
+    args.add("-Mroot=" + main_src.path)
+    _add_module_args(args, dep_modules, module_dep_graph)
+    for archive in dep_archives:
+        args.add(archive.path)
     args.add("-femit-bin=" + out.path)
     args.add("--cache-dir")
     args.add(cache_dir.path)
@@ -44,14 +106,17 @@ def _zig_binary_impl(ctx):
 
     srcs = ctx.files.srcs
     main_src = _select_main_src(srcs, ctx.attr.main, "zig_binary")
+    dep_modules, module_dep_graph, transitive_srcs, transitive_archives = _collect_dep_info(ctx.attr.deps)
+    root_deps = [dep[ZigLibraryInfo].module_name for dep in ctx.attr.deps]
+    dep_archives = depset(transitive = transitive_archives).to_list()
 
     args = ctx.actions.args()
     args.add("build-exe")
-    _add_common_args(args, main_src, out, cache_dir, global_cache_dir)
+    _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives)
 
     ctx.actions.run(
         outputs = [out, cache_dir, global_cache_dir],
-        inputs = srcs,
+        inputs = depset(srcs, transitive = transitive_srcs + transitive_archives),
         executable = zig_exe,
         arguments = [args],
         mnemonic = "ZigCompile",
@@ -76,6 +141,10 @@ zig_binary = rule(
         "main": attr.string(
             doc = "The main source file to compile. Defaults to the first file in srcs.",
         ),
+        "deps": attr.label_list(
+            doc = "Zig libraries to make available as imports and link inputs.",
+            providers = [ZigLibraryInfo],
+        ),
     },
     executable = True,
     toolchains = ["//zig:toolchain_type"],
@@ -91,14 +160,21 @@ def _zig_library_impl(ctx):
 
     srcs = ctx.files.srcs
     main_src = _select_main_src(srcs, ctx.attr.main, "zig_library")
+    dep_modules, module_dep_graph, transitive_srcs, transitive_archives = _collect_dep_info(ctx.attr.deps)
+    root_deps = [dep[ZigLibraryInfo].module_name for dep in ctx.attr.deps]
+
+    module_name = ctx.attr.module_name or ctx.label.name
+    existing = dep_modules.get(module_name)
+    if existing and existing.path != main_src.path:
+        fail("module name '{}' conflicts with a dependency".format(module_name))
 
     args = ctx.actions.args()
     args.add("build-lib")
-    _add_common_args(args, main_src, out, cache_dir, global_cache_dir)
+    _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, depset(transitive = transitive_archives).to_list())
 
     ctx.actions.run(
         outputs = [out, cache_dir, global_cache_dir],
-        inputs = srcs,
+        inputs = depset(srcs, transitive = transitive_srcs + transitive_archives),
         executable = zig_exe,
         arguments = [args],
         mnemonic = "ZigCompileLib",
@@ -109,7 +185,12 @@ def _zig_library_impl(ctx):
         DefaultInfo(files = depset([out])),
         ZigLibraryInfo(
             archive = out,
-            srcs = depset(srcs),
+            archives = depset([out], transitive = transitive_archives),
+            main_src = main_src,
+            module_dep_graph = dict(module_dep_graph, **{module_name: root_deps}),
+            module_name = module_name,
+            modules = dict(dep_modules, **{module_name: main_src}),
+            srcs = depset(srcs, transitive = transitive_srcs),
         ),
     ]
 
@@ -123,6 +204,13 @@ zig_library = rule(
         ),
         "main": attr.string(
             doc = "The root source file for the library. Defaults to the first file in srcs.",
+        ),
+        "module_name": attr.string(
+            doc = "Import name exposed to dependents. Defaults to the target name.",
+        ),
+        "deps": attr.label_list(
+            doc = "Other zig_library targets this library imports or links.",
+            providers = [ZigLibraryInfo],
         ),
     },
     toolchains = ["//zig:toolchain_type"],
