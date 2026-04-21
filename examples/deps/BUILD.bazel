@@ -1,0 +1,18 @@
+load("//zig:defs.bzl", "zig_binary", "zig_library")
+
+zig_library(
+    name = "greeter",
+    srcs = ["greeter.zig"],
+)
+
+zig_library(
+    name = "message",
+    srcs = ["message.zig"],
+    deps = [":greeter"],
+)
+
+zig_binary(
+    name = "hello_deps",
+    srcs = ["main.zig"],
+    deps = [":message"],
+)
