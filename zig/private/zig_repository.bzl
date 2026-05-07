@@ -31,10 +31,12 @@ exports_files(["{zig_exe}"])
 
 zig_toolchain(
     name = "zig_toolchain_impl",
+    target = "{target}",
     zig_exe = "{zig_exe}",
     zig_version = "{zig_version}",
 )
 """.format(
+            target = ctx.attr.index_key,
             zig_exe = zig_exe,
             zig_version = ctx.attr.zig_version,
         ),

@@ -3,6 +3,7 @@
 ZigInfo = provider(
     doc = "Information about the Zig compiler.",
     fields = {
+        "target": "string: The Zig target triple matching the selected SDK.",
         "zig_exe": "File: The Zig compiler executable.",
         "zig_version": "string: The Zig version.",
     },
@@ -10,6 +11,7 @@ ZigInfo = provider(
 
 def _zig_toolchain_impl(ctx):
     zig_info = ZigInfo(
+        target = ctx.attr.target,
         zig_exe = ctx.file.zig_exe,
         zig_version = ctx.attr.zig_version,
     )
@@ -21,6 +23,10 @@ def _zig_toolchain_impl(ctx):
 zig_toolchain = rule(
     implementation = _zig_toolchain_impl,
     attrs = {
+        "target": attr.string(
+            doc = "The Zig target triple matching this SDK.",
+            mandatory = True,
+        ),
         "zig_exe": attr.label(
             doc = "The Zig compiler executable.",
             mandatory = True,

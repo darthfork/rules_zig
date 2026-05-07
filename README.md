@@ -29,6 +29,8 @@ CI currently runs:
 
 - `bazel test //...`
 
+That includes the dedicated regression tests under `tests/` plus the runnable examples that are test targets.
+
 As the ruleset grows, this matrix can expand to include more Bazel versions, additional examples, and stricter validation.
 
 ## Setup
@@ -81,9 +83,19 @@ In practice:
 - local Linux builds use a Linux Zig SDK
 - remote execution would pick the Zig SDK that matches the remote exec platform
 
-`zig_binary`, `zig_library`, and `zig_test` do not yet model Bazel target-platform driven cross-compilation. They invoke Zig without a `-target` flag, so outputs are currently host-native for the chosen exec-platform SDK.
+`zig_binary`, `zig_library`, and `zig_test` currently pass an explicit Zig `-target` matching the selected exec-platform SDK. They do not yet model Bazel target-platform driven cross-compilation. Outputs are currently host-native for the chosen exec-platform SDK.
 
 So for now, treat these rules as host-native builds with exec-platform-aware toolchain selection, not full Bazel cross-compilation rules yet.
+
+## Examples
+
+The repository includes runnable examples for common usage patterns:
+
+- `examples/hello_world` — minimal `zig_binary`
+- `examples/deps` — dependency composition with `zig_library` and `zig_binary`
+- `examples/math_lib` — `zig_library` plus `zig_test`
+- `examples/multi_package` — a binary depending on a library from another Bazel package
+- `examples/bzlmod_consumer` — template files for consuming `rules_zig` from another module before BCR publication
 
 ## Rules
 

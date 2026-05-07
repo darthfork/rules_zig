@@ -82,7 +82,9 @@ def _add_module_args(args, dep_modules, module_dep_graph):
         if not progressed:
             fail("cyclic Zig module dependencies detected in deps")
 
-def _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives):
+def _add_common_args(args, zig_target, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives):
+    args.add("-target")
+    args.add(zig_target)
     for module_name in root_deps:
         args.add("--dep")
         args.add(module_name)
@@ -112,7 +114,7 @@ def _zig_binary_impl(ctx):
 
     args = ctx.actions.args()
     args.add("build-exe")
-    _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives)
+    _add_common_args(args, zig_info.target, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, dep_archives)
 
     ctx.actions.run(
         outputs = [out, cache_dir, global_cache_dir],
@@ -170,7 +172,7 @@ def _zig_library_impl(ctx):
 
     args = ctx.actions.args()
     args.add("build-lib")
-    _add_common_args(args, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, depset(transitive = transitive_archives).to_list())
+    _add_common_args(args, zig_info.target, main_src, out, cache_dir, global_cache_dir, root_deps, dep_modules, module_dep_graph, depset(transitive = transitive_archives).to_list())
 
     ctx.actions.run(
         outputs = [out, cache_dir, global_cache_dir],
@@ -239,12 +241,13 @@ def _zig_test_impl(ctx):
     for src in srcs:
         copy_commands.append("cp '{}' '{}/{}'".format(src.path, src_tree.path, src.basename))
 
-    command = "set -euo pipefail\nROOT=\"$PWD\"\nmkdir -p '{src_tree}' '{cache_dir}' '{global_cache_dir}'\n{copies}\ncd '{src_tree}'\n\"$ROOT/{zig}\" test '{main}' -femit-bin=\"$ROOT/{out}\" --cache-dir \"$ROOT/{cache_dir}\" --global-cache-dir \"$ROOT/{global_cache_dir}\"".format(
+    command = "set -euo pipefail\nROOT=\"$PWD\"\nmkdir -p '{src_tree}' '{cache_dir}' '{global_cache_dir}'\n{copies}\ncd '{src_tree}'\n\"$ROOT/{zig}\" test -target '{target}' '{main}' -femit-bin=\"$ROOT/{out}\" --cache-dir \"$ROOT/{cache_dir}\" --global-cache-dir \"$ROOT/{global_cache_dir}\"".format(
         src_tree = src_tree.path,
         cache_dir = cache_dir.path,
         global_cache_dir = global_cache_dir.path,
         copies = "\n".join(copy_commands),
         zig = zig_link.path,
+        target = zig_info.target,
         main = main_src.basename,
         out = out.path,
     )
