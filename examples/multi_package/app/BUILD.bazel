@@ -1,0 +1,7 @@
+load("//zig:defs.bzl", "zig_binary")
+
+zig_binary(
+    name = "hello_multi_package",
+    srcs = ["main.zig"],
+    deps = ["//examples/multi_package/lib:greeting"],
+)

@@ -189,7 +189,7 @@
   "moduleExtensions": {
     "//zig:extensions.bzl%zig": {
       "general": {
-        "bzlTransitiveDigest": "FUodQNJVgCSqxwkc4v/mbiiCeZFZOAk1f3buP+yS+tE=",
+        "bzlTransitiveDigest": "0tFSWO5uuDcN62dBMHXuSip7u1QbghomNZN7neHw11c=",
         "usagesDigest": "1zsLy7Z6DquC93RpnXpFVDS+CNStZmTrLh3/REgEtcQ=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
